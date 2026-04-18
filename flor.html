@@ -43,6 +43,28 @@
       animation: fadeDown 2.5s ease forwards;
       pointer-events: none;
     }
+    #lyrics {
+  position: absolute;
+  bottom: max(100px, env(safe-area-inset-bottom, 0px) + 150px);
+  left: 0;
+  right: 0;
+  text-align: center;
+
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  font-size: clamp(14px, 4vw, 20px);
+
+  color: rgba(255, 220, 220, 0.9);
+  letter-spacing: 0.05em;
+
+  text-shadow: 0 0 12px rgba(200,60,80,0.4);
+
+  opacity: 0;
+  transition: opacity 0.6s ease;
+
+  pointer-events: none;
+  padding: 0 20px;
+}
 
     #msg {
       position: absolute;
@@ -125,7 +147,7 @@
   
   <canvas id="bgCanvas"></canvas>
   <canvas id="mainCanvas"></canvas>
-
+  <div id="lyrics">pspd</div>
   <div id="title">Para ti Betsa🌹</div>
   <div id="msg">— Para ti, con todo mi amor —</div>
     <!-- AUDIO (oculto) -->
@@ -156,6 +178,65 @@ const bgC   = document.getElementById('bgCanvas');
 const mc    = document.getElementById('mainCanvas');
 const bgCtx = bgC.getContext('2d');
 const ctx   = mc.getContext('2d');
+const lyricsEl = document.getElementById('lyrics');
+const lyrics = [
+  { time: 12, text: "Be still" },
+  { time: 14, text: "And go on to bed" },
+  { time: 17, text: "Nobody knows what lies ahead" },
+  { time: 23, text: "And life is short" },
+  { time: 25, text: "To say the least" },
+  { time: 29, text: "We're in the belly of the beast" },
+  { time: 34, text: "Be still" },
+  { time: 37, text: "Wild and young" },
+  { time: 42, text: "Long may your innocence reign" },
+  { time: 46, text: "Like shells on the shore" },
+  { time: 49, text: "And may your limits be unknown" },
+  { time: 52, text: "And may your efforts be your own" },
+  { time: 56, text: "If you ever feel you can't take it anymore" },
+  { time: 64, text: "Don't break character" },
+  { time: 69, text: "You've got a lot of heart" },
+  { time: 77, text: "Is this real or just a dream?" },
+  { time: 83, text: "Rise up like the sun" },
+  { time: 86, text: "Labor 'til the work is done" },
+  { time: 93, text: "Be still" },
+  { time: 95, text: "One day you'll leave" },
+  { time: 100, text: "Fearlessness on your sleeve" },
+  { time: 105, text: "When you've come back, tell me what did you see" },
+  { time: 110, text: "What did you see?" },
+  { time: 115, text: "Was there something out there for me?" },
+  { time: 120, text: "Be still" },
+  { time: 125, text: "Close your eyes" },
+  { time: 130, text: "Soon enough you'll be on your own" },
+  { time: 135, text: "Steady and straight" },
+  { time: 140, text: "And if they drag you through the mud" },
+  { time: 145, text: "It doesn't change what's in your blood" },
+  { time: 150, text: "(Over rock, over chain, over trap, over plain)" },
+  { time: 155, text: "When they knock you down" },
+  { time: 160, text: "Don't break character" },
+  { time: 165, text: "You've got a lot of heart" },
+  { time: 170, text: "Is this real or just a dream?" },
+  { time: 175, text: "Be still" },
+  { time: 180, text: "Be still" },
+  { time: 185, text: "Be still" },
+  { time: 190, text: "Be still" },
+  { time: 195, text: "Over rock and chain" },
+  { time: 200, text: "Over sunset plain" },
+  { time: 205, text: "Over trap and snare" },
+  { time: 210, text: "When you're in too deep" },
+  { time: 215, text: "In your wildest dream" },
+  { time: 220, text: "In your made up scheme" },
+  { time: 225, text: "When they knock you down" },
+  { time: 230, text: "When they knock you down" },
+  { time: 235, text: "Don't break character" },
+  { time: 240, text: "You've got so much heart" },
+  { time: 245, text: "Is this real or just a dream?" },
+  { time: 250, text: "Oh rise up like the sun and" },
+  { time: 255, text: "Labor 'til the work is done" },
+  { time: 260, text: "Rise up like the sun and" },
+  { time: 265, text: "Labor 'til the work is" },
+  { time: 270, text: "Rise up like the sun and" },
+  { time: 275, text: "Labor 'til the work is done" }
+];
 
 let W, H;
 const audio = document.getElementById('player');
@@ -171,6 +252,26 @@ function resize() {
 }
 resize();
 window.addEventListener('resize', resize);
+
+audio.addEventListener('timeupdate', () => {
+  const current = audio.currentTime;
+
+  for (let i = lyrics.length - 1; i >= 0; i--) {
+    if (current >= lyrics[i].time) {
+
+      if (lyricsEl.textContent !== lyrics[i].text) {
+        lyricsEl.style.opacity = 0;
+
+        setTimeout(() => {
+          lyricsEl.textContent = lyrics[i].text;
+          lyricsEl.style.opacity = 1;
+        }, 300);
+      }
+
+      break;
+    }
+  }
+});
 
 // ── VIENTO AUTOMÁTICO ─────────────────────────────────
 // Siempre hay una brisa suave automática — sin panel de control
