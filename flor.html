@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <title>Betsa 🌹</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Cormorant+Garamond:ital,wght@0,300;1,300&display=swap');
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    html {
+      height: -webkit-fill-available;
+    }
+    body {
+      width: 100%; height: 100vh; height: -webkit-fill-available;
+      background: #0d0510; overflow: hidden;
+      font-family: 'Cormorant Garamond', serif;
+      touch-action: manipulation;
+    }
+
+    #scene {
+      position: relative;
+      width: 100vw; height: 100vh; height: -webkit-fill-available;
+      overflow: hidden;
+    }
+
+    canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+
+    /* ── Título y mensaje ── */
+    #title {
+      position: absolute;
+      top: max(44px, env(safe-area-inset-top, 20px) + 16px);
+      left: 0; right: 0; text-align: center;
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(20px, 6vw, 34px);
+      font-weight: 600;
+      color: rgba(255,210,210,0.92);
+      letter-spacing: 0.1em;
+      text-shadow: 0 0 28px rgba(220,80,100,0.65);
+      animation: fadeDown 2.5s ease forwards;
+      pointer-events: none;
+    }
+
+    #msg {
+      position: absolute;
+      bottom: max(120px, env(safe-area-inset-bottom, 0px) + 110px);
+      left: 0; right: 0; text-align: center;
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      font-size: clamp(15px, 4.5vw, 22px);
+      color: rgba(255,190,200,0.82);
+      letter-spacing: 0.05em;
+      text-shadow: 0 0 18px rgba(200,60,80,0.5);
+      transition: opacity 0.7s ease;
+      pointer-events: none;
+      padding: 0 24px;
+    }
+
+    @keyframes fadeDown {
+      from { opacity:0; transform:translateY(-10px); }
+      to   { opacity:1; transform:none; }
+    }
+
+    /* ── Panel de música ── */
+    
+    
+    audio#player {
+      width: 100%; height: 30px; border-radius: 8px;
+      accent-color: #c03060;
+    }
+    
+    
+
+    /* ── Botones de acción (fila inferior) ── */
+    #controls {
+      position: absolute;
+      bottom: max(28px, env(safe-area-inset-bottom, 0px) + 16px);
+      left: 50%; transform: translateX(-50%);
+      display: flex;
+      flex-direction: row;
+      gap: 10px;
+      pointer-events: all;
+      white-space: nowrap;
+    }
+
+    .ctrl-btn {
+      background: rgba(120,20,40,0.5);
+      border: 1px solid rgba(255,100,130,0.4);
+      color: rgba(255,180,200,0.92);
+      padding: 10px 16px;
+      border-radius: 22px;
+      font-size: clamp(12px, 3.5vw, 14px);
+      font-family: 'Cormorant Garamond', serif;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      transition: background .2s, transform .15s;
+      -webkit-user-select: none; user-select: none;
+      touch-action: manipulation;
+      /* mínimo 44px de alto para touch targets Apple HIG */
+      min-height: 44px;
+      display: flex; align-items: center;
+    }
+    .ctrl-btn:active { background: rgba(170,35,65,0.72); transform: scale(0.95); }
+
+    /* ── Hint ── */
+    #hint {
+      position: absolute;
+      bottom: max(82px, env(safe-area-inset-bottom, 0px) + 70px);
+      left: 0; right: 0; text-align: center;
+      font-size: 12px; color: rgba(200,130,150,0.45);
+      letter-spacing: 0.06em;
+      animation: breathe 2.8s ease-in-out infinite;
+      pointer-events: none;
+      transition: opacity 1s;
+    }
+   
+    @keyframes breathe { 0%,100%{opacity:0.18} 50%{opacity:0.55} }
+  </style>
+</head>
+<body>
+<div id="scene">
+  
+  <canvas id="bgCanvas"></canvas>
+  <canvas id="mainCanvas"></canvas>
+
+  <div id="title">Para ti Betsa🌹</div>
+  <div id="msg">— Para ti, con todo mi amor —</div>
+    <!-- AUDIO (oculto) -->
+<audio id="player" loop preload="auto" src="Be Still.mp3"></audio>
+
+  <!--
+  ═══════════════════════════════════════════════════
+  🎵 AGREGAR MÚSICA:
+     Cambia src="" por el nombre de tu archivo .mp3
+     Ejemplo:  src="cancion.mp3"
+     Coloca el .mp3 en la misma carpeta que este HTML.
+  ═══════════════════════════════════════════════════
+  -->
+  
+
+  <div id="hint">✨ Toca para crear magia</div>
+
+  <div id="controls">
+    <button class="ctrl-btn" id="btn-petals">🌸 Pétalos</button>
+    <button class="ctrl-btn" id="btn-hearts">💖 Corazones</button>
+    <button class="ctrl-btn" id="btn-msg">💌 Mensaje</button>
+  </div>
+</div>
+
+<script>
+// ── SETUP ──────────────────────────────────────────────
+const scene = document.getElementById('scene');
+const bgC   = document.getElementById('bgCanvas');
+const mc    = document.getElementById('mainCanvas');
+const bgCtx = bgC.getContext('2d');
+const ctx   = mc.getContext('2d');
+
+let W, H;
+const audio = document.getElementById('player');
+
+// leer decisión del usuario
+const musicChoice = localStorage.getItem('music');
+
+if (musicChoice === 'yes') {
+  document.addEventListener('click', () => {
+    audio.volume = 0.5;
+    audio.play();
+  }, { once: true });
+}
+function resize() {
+  W = window.innerWidth;
+  H = window.innerHeight;
+  bgC.width = mc.width = W;
+  bgC.height = mc.height = H;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ── VIENTO AUTOMÁTICO ─────────────────────────────────
+// Siempre hay una brisa suave automática — sin panel de control
+let windCurrent = 0;   // valor interpolado (-1 izq ↔ +1 der)
+let autoTime    = 0;   // tiempo para el oscilador de viento
+
+// Ruido de ráfaga
+let noiseVal = 0, noiseVel = 0;
+
+function updateWind() {
+  autoTime += 0.004;
+  // Viento principal: onda lenta que cambia de dirección
+  const base = Math.sin(autoTime) * 0.45
+             + Math.sin(autoTime * 0.37) * 0.2
+             + Math.sin(autoTime * 1.13) * 0.08;
+
+  // Ruido de ráfagas
+  noiseVel += (Math.random() - 0.5) * 0.005;
+  noiseVel *= 0.91;
+  noiseVal += noiseVel;
+  noiseVal *= 0.97;
+
+  const target = base + noiseVal * 0.18;
+  windCurrent += (target - windCurrent) * 0.028;
+}
+
+// ── ESTRELLAS ──────────────────────────────────────────
+let stars = [];
+function buildStars() {
+  stars = Array.from({length: 140}, () => ({
+    x: Math.random() * W, y: Math.random() * H * 0.72,
+    r: Math.random() * 1.5 + 0.2,
+    phase: Math.random() * Math.PI * 2,
+    speed: Math.random() * 0.006 + 0.002
+  }));
+}
+buildStars();
+window.addEventListener('resize', buildStars);
+
+function drawBg(t) {
+  bgCtx.clearRect(0, 0, W, H);
+  // luna
+  const mx = W * 0.82, my = H * 0.11;
+  const mg = bgCtx.createRadialGradient(mx, my, 2, mx, my, 52);
+  mg.addColorStop(0, 'rgba(255,228,208,0.22)');
+  mg.addColorStop(1, 'rgba(0,0,0,0)');
+  bgCtx.beginPath(); bgCtx.arc(mx, my, 52, 0, Math.PI*2);
+  bgCtx.fillStyle = mg; bgCtx.fill();
+  // estrellas
+  stars.forEach(s => {
+    const a = 0.2 + 0.8 * Math.abs(Math.sin(t * s.speed + s.phase));
+    bgCtx.beginPath(); bgCtx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+    bgCtx.fillStyle = `rgba(255,222,232,${a.toFixed(2)})`; bgCtx.fill();
+  });
+}
+
+// ── CORAZONES ──────────────────────────────────────────
+const hearts = [];
+function spawnHeart(x, y, big) {
+  hearts.push({
+    x: x ?? Math.random() * W,
+    y: y ?? H + 20,
+    vx: (Math.random() - 0.5) * 1.4,
+    vy: -(Math.random() * 1.8 + 0.7),
+    size: big ? (Math.random() * 20 + 14) : (Math.random() * 10 + 5),
+    alpha: 1,
+    rot:  (Math.random() - 0.5) * 0.4,
+    rotV: (Math.random() - 0.5) * 0.035,
+    hue:  Math.random() * 40 + 340
+  });
+}
+function drawHeart(h) {
+  const s = h.size;
+  ctx.save(); ctx.translate(h.x, h.y); ctx.rotate(h.rot);
+  ctx.globalAlpha = Math.max(0, h.alpha);
+  ctx.fillStyle = `hsl(${h.hue},80%,66%)`;
+  ctx.shadowColor = `hsl(${h.hue},90%,72%)`; ctx.shadowBlur = 10;
+  ctx.beginPath();
+  ctx.moveTo(0, -s*.28);
+  ctx.bezierCurveTo(-s*.06,-s*.56, -s*.62,-s*.56, -s*.62,-s*.1);
+  ctx.bezierCurveTo(-s*.62, s*.18, -s*.3, s*.44, 0, s*.65);
+  ctx.bezierCurveTo( s*.3,  s*.44,  s*.62, s*.18, s*.62,-s*.1);
+  ctx.bezierCurveTo( s*.62,-s*.56,  s*.06,-s*.56, 0,-s*.28);
+  ctx.closePath(); ctx.fill(); ctx.restore();
+}
+
+
+// ── PÉTALOS ────────────────────────────────────────────
+const petals = [];
+function spawnPetal(x, y) {
+  petals.push({
+    x: x ?? Math.random() * W, y: y ?? -20,
+    vx: (Math.random() - 0.5) * 1.6, vy: Math.random() * 1.3 + 0.5,
+    size: Math.random() * 11 + 6,
+    rot:  Math.random() * Math.PI * 2, rotV: (Math.random() - 0.5) * 0.09,
+    alpha: 0.92,
+    hue:  Math.random() * 35 + 338,
+    wob:  Math.random() * Math.PI * 2, wobS: Math.random() * 0.04 + 0.02
+  });
+}
+function drawPetal(p) {
+  ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+  ctx.globalAlpha = Math.max(0, p.alpha);
+  ctx.fillStyle = `hsl(${p.hue},72%,72%)`;
+  ctx.shadowColor = `hsl(${p.hue},80%,78%)`; ctx.shadowBlur = 6;
+  ctx.beginPath(); ctx.ellipse(0, 0, p.size*.38, p.size, 0, 0, Math.PI*2);
+  ctx.fill(); ctx.restore();
+}
+
+// ── CHISPAS ────────────────────────────────────────────
+const sparks = [];
+function burst(x, y) {
+  for (let i = 0; i < 22; i++) {
+    const a = (i / 22) * Math.PI * 2, sp = Math.random() * 4 + 1;
+    sparks.push({
+      x, y, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp,
+      alpha: 1, size: Math.random()*5+2, hue: Math.random()*60+310
+    });
+  }
+}
+
+// ── ROSA — FÍSICA DE VIENTO ───────────────────────────
+const SEGS     = 10;
+let roseGrow   = 0;
+let roseBloom  = 0;
+const segAng   = new Array(SEGS).fill(0);
+const segVel   = new Array(SEGS).fill(0);
+
+function stemSegLen() {
+  return Math.min(H * 0.54, 300) / SEGS * roseGrow;
+}
+
+function updatePhysics() {
+  const gust = windCurrent;
+  for (let i = 0; i < SEGS; i++) {
+    const inf   = (i + 0.5) / SEGS;
+    const infSq = inf * inf;
+    const windForce = gust * 0.052 * infSq;
+    const stiffness = 0.024 + (1 - infSq) * 0.05;
+    const damping   = 0.81  + infSq * 0.08;
+    segVel[i] += windForce - segAng[i] * stiffness;
+    segVel[i] *= damping;
+    segAng[i] += segVel[i];
+    const lim = 0.06 + infSq * 0.70;
+    segAng[i] = Math.max(-lim, Math.min(lim, segAng[i]));
+  }
+}
+
+function buildStemPoints() {
+  const bx = W / 2, by = H - 40;
+  const len = stemSegLen();
+  const pts = [{x: bx, y: by}];
+  let cx = bx, cy = by, absAngle = -Math.PI / 2;
+  for (let i = 0; i < SEGS; i++) {
+    absAngle += segAng[i];
+    cx += Math.cos(absAngle) * len;
+    cy += Math.sin(absAngle) * len;
+    pts.push({x: cx, y: cy});
+  }
+  return pts;
+}
+
+function drawLeaf(x, y, baseAngle, bend, size, color) {
+  ctx.save(); ctx.translate(x, y);
+  ctx.rotate(baseAngle + bend * 0.5);
+  ctx.fillStyle = color;
+  ctx.shadowColor = 'rgba(0,70,0,0.5)'; ctx.shadowBlur = 5;
+  ctx.beginPath(); ctx.ellipse(0, 0, size*.33, size, 0, 0, Math.PI*2);
+  ctx.fill(); ctx.restore();
+}
+
+function drawRose() {
+  if (roseGrow <= 0) return;
+  const pts = buildStemPoints();
+
+  // tallo
+  ctx.save();
+  ctx.strokeStyle = '#2a7a2a'; ctx.lineWidth = 6;
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.shadowColor = '#164816'; ctx.shadowBlur = 8;
+  ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length - 1; i++) {
+    const mx = (pts[i].x + pts[i+1].x) / 2;
+    const my = (pts[i].y + pts[i+1].y) / 2;
+    ctx.quadraticCurveTo(pts[i].x, pts[i].y, mx, my);
+  }
+  ctx.lineTo(pts[pts.length-1].x, pts[pts.length-1].y);
+  ctx.stroke(); ctx.restore();
+
+  const topBend = segAng.reduce((a,b) => a+b, 0);
+  const midBend = segAng.slice(0, Math.floor(SEGS/2)).reduce((a,b) => a+b, 0);
+
+  // hojas
+  if (roseGrow > 0.32) {
+    const f  = Math.min((roseGrow-0.32)/0.38, 1);
+    const lp = pts[Math.floor(SEGS*0.32)];
+    if (lp) {
+      drawLeaf(lp.x+9,  lp.y, -0.7,  midBend, f*40, '#38a038');
+      drawLeaf(lp.x-9,  lp.y,  0.7,  midBend, f*30, '#2e8a2e');
+    }
+  }
+  if (roseGrow > 0.62) {
+    const f  = Math.min((roseGrow-0.62)/0.32, 1);
+    const lp = pts[Math.floor(SEGS*0.62)];
+    if (lp) {
+      drawLeaf(lp.x+8, lp.y, -0.52, topBend*0.6, f*32, '#2c8c2c');
+      drawLeaf(lp.x-8, lp.y,  0.52, topBend*0.6, f*23, '#237823');
+    }
+  }
+
+  // flor
+  drawFlower(pts[pts.length-1].x, pts[pts.length-1].y, roseBloom, topBend);
+}
+
+function drawFlower(cx, cy, bloom, bend) {
+  if (bloom <= 0) return;
+  ctx.save(); ctx.translate(cx, cy);
+  ctx.rotate(bend * 0.58);
+  const layers = 5;
+  for (let layer = layers; layer >= 0; layer--) {
+    const lb = Math.max(0, Math.min((bloom*(layers+1)-layer)/1.4, 1));
+    if (lb <= 0) continue;
+    const n    = layer === 0 ? 5 : 5 + layer*2;
+    const r    = (7+layer*10) + ((13+layer*17)-(7+layer*10))*lb;
+    const pw   = 0.22 + layer*0.045;
+    const dark = 1 - layer*0.1;
+    const red  = Math.round(195*dark+55);
+    const grn  = Math.round(18*dark);
+    for (let i = 0; i < n; i++) {
+      const angle = (i/n)*Math.PI*2 + layer*0.45;
+      ctx.save(); ctx.rotate(angle);
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = `rgb(${red},${grn},${grn+18})`;
+      ctx.shadowColor = 'rgba(170,0,25,0.25)'; ctx.shadowBlur = 6;
+      ctx.beginPath(); ctx.ellipse(0, -r, r*pw, r*0.52, 0, 0, Math.PI*2);
+      ctx.fill(); ctx.restore();
+    }
+  }
+  const cB = Math.min(bloom*1.6, 1);
+  const g  = ctx.createRadialGradient(0, 0, 0, 0, 0, 15*cB);
+  g.addColorStop(0, 'rgba(235,55,55,1)');
+  g.addColorStop(1, 'rgba(130,8,8,0.85)');
+  ctx.beginPath(); ctx.arc(0, 0, 15*cB, 0, Math.PI*2);
+  ctx.fillStyle = g; ctx.globalAlpha = 1; ctx.fill();
+  ctx.restore();
+}
+
+// ── MENSAJES ───────────────────────────────────────────
+const MSGS = [
+  "— Para ti, con todo mi amor —",
+  "— Eres mi flor favorita —",
+  "— Cada día me enamoro más de ti —",
+  "— Contigo todo florece —",
+  "— Mi corazón es tuyo, siempre —",
+  "— Eres la luz de mis días —",
+  "— Te quiero más que a todas las rosas —"
+];
+let msgIdx = 0;
+const msgEl = document.getElementById('msg');
+function nextMsg() {
+  msgIdx = (msgIdx + 1) % MSGS.length;
+  msgEl.style.opacity = 0;
+  setTimeout(() => { msgEl.textContent = MSGS[msgIdx]; msgEl.style.opacity = 1; }, 500);
+}
+
+// ── EVENTOS — touch + click ────────────────────────────
+function onTap(e) {
+  e.preventDefault();
+  const r = scene.getBoundingClientRect();
+  const x = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
+  const y = (e.touches ? e.touches[0].clientY : e.clientY) - r.top;
+  burst(x, y);
+  for (let i = 0; i < 3; i++)
+    spawnHeart(x + (Math.random()-.5)*40, y + (Math.random()-.5)*40, true);
+  nextMsg();
+  document.getElementById('hint').style.opacity = 0;
+}
+scene.addEventListener('touchstart', onTap, {passive: false});
+scene.addEventListener('click', onTap);
+
+function stopProp(e) { e.stopPropagation(); }
+
+document.getElementById('btn-petals').addEventListener('click', e => {
+  stopProp(e);
+  const tip  = buildStemPoints();
+  const last = tip[tip.length-1];
+  for (let i = 0; i < 60; i++)
+    setTimeout(() => spawnPetal(last.x + (Math.random()-.5)*50, -10), i * 45);
+});
+document.getElementById('btn-petals').addEventListener('touchstart', stopProp, {passive:true});
+
+document.getElementById('btn-hearts').addEventListener('click', e => {
+  stopProp(e);
+  for (let i = 0; i < 30; i++) setTimeout(() => spawnHeart(), i * 70);
+});
+document.getElementById('btn-hearts').addEventListener('touchstart', stopProp, {passive:true});
+
+document.getElementById('btn-msg').addEventListener('click', e => {
+  stopProp(e); nextMsg();
+});
+document.getElementById('btn-msg').addEventListener('touchstart', stopProp, {passive:true});
+
+// ── LOOP ───────────────────────────────────────────────
+let t = 0, last = performance.now();
+function tick(now) {
+  const _dt = Math.min((now - last) / 16.67, 3); last = now; t++;
+
+  ctx.clearRect(0, 0, W, H);
+  drawBg(t);
+
+  // Viento automático
+  updateWind();
+
+  // Crecimiento de la rosa
+  if (roseGrow  < 1) roseGrow  = Math.min(roseGrow  + 0.002, 1);
+  if (roseGrow  > 0.92 && roseBloom < 1)
+    roseBloom = Math.min(roseBloom + 0.005, 1);
+
+  updatePhysics();
+  drawRose();
+
+  // Corazones automáticos
+  if (t % 100 === 0) spawnHeart();
+  hearts.forEach(h => {
+    h.x += h.vx + windCurrent * 0.5;
+    h.y += h.vy; h.rot += h.rotV;
+    h.vy -= 0.004; h.alpha -= 0.0035;
+    drawHeart(h);
+  });
+  for (let i = hearts.length-1; i >= 0; i--)
+    if (hearts[i].alpha <= 0 || hearts[i].y < -40) hearts.splice(i, 1);
+
+  // Pétalos automáticos
+  if (t % 200 === 0) spawnPetal();
+  petals.forEach(p => {
+    p.x += p.vx + Math.sin(p.wob)*0.9 + windCurrent*2.0;
+    p.y += p.vy; p.wob += p.wobS; p.rot += p.rotV + windCurrent*0.05;
+    if (p.y > H * 0.8) p.alpha -= 0.018;
+    drawPetal(p);
+  });
+  for (let i = petals.length-1; i >= 0; i--)
+    if (petals[i].alpha <= 0 || petals[i].y > H+30) petals.splice(i, 1);
+
+  // Chispas
+  sparks.forEach(s => {
+    s.x += s.vx; s.y += s.vy; s.vy += 0.09; s.alpha -= 0.022;
+    ctx.beginPath(); ctx.arc(s.x, s.y, s.size*Math.max(0,s.alpha), 0, Math.PI*2);
+    ctx.fillStyle = `hsla(${s.hue},85%,72%,${Math.max(0,s.alpha)})`; ctx.fill();
+  });
+  for (let i = sparks.length-1; i >= 0; i--)
+    if (sparks[i].alpha <= 0) sparks.splice(i, 1);
+
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>

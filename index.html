@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Inicio 🎵</title>
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #0d0510;
+      color: #ffd0d0;
+      font-family: 'Playfair Display', serif;
+    }
+
+    .box {
+      text-align: center;
+      background: rgba(30,10,20,0.9);
+      padding: 30px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,100,130,0.4);
+    }
+
+    button {
+      margin: 10px;
+      padding: 10px 20px;
+      border-radius: 10px;
+      border: none;
+      background: rgba(120,20,40,0.6);
+      color: white;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<div class="box">
+  <h2>¿Quieres música? 🎵</h2>
+  <button onclick="go(true)">Sí</button>
+  <button onclick="go(false)">No</button>
+</div>
+
+<script>
+function go(withMusic) {
+  // guardamos la decisión
+  localStorage.setItem('music', withMusic ? 'yes' : 'no');
+
+  // redirigimos a tu página principal
+  window.location.href = "/flor.html"; // <-- aquí tu archivo principal
+}
+</script>
+
+</body>
+</html>
