@@ -159,16 +159,10 @@ const ctx   = mc.getContext('2d');
 
 let W, H;
 const audio = document.getElementById('player');
-
-// leer decisión del usuario
 const musicChoice = localStorage.getItem('music');
 
-if (musicChoice === 'yes') {
-  document.addEventListener('click', () => {
-    audio.volume = 0.5;
-    audio.play();
-  }, { once: true });
-}
+let musicStarted = false;
+
 function resize() {
   W = window.innerWidth;
   H = window.innerHeight;
@@ -445,6 +439,25 @@ function nextMsg() {
 // ── EVENTOS — touch + click ────────────────────────────
 function onTap(e) {
   e.preventDefault();
+
+  // 🎵 iniciar música en el PRIMER toque (clave para móvil)
+  if (musicChoice === 'yes' && !musicStarted) {
+    audio.volume = 0.5;
+    audio.muted = false;
+    audio.currentTime = 0;
+
+    const playPromise = audio.play();
+
+    if (playPromise !== undefined) {
+      playPromise
+        .then(() => {
+          musicStarted = true;
+        })
+        .catch(err => {
+          console.log("Error audio:", err);
+        });
+    }
+  }
   const r = scene.getBoundingClientRect();
   const x = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
   const y = (e.touches ? e.touches[0].clientY : e.clientY) - r.top;
